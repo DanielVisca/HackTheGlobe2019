@@ -6,3 +6,4 @@ def index(request):
 
 def sms_response(request):
 	return HttpResponse("SMS page.")
+
