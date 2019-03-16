@@ -11,7 +11,6 @@ class User(models.Model):
 
 class Listing(models.Model):
 	"""
-	NoteToSelf: changed from 'Listings' to 'Listing', unmigrated.
 	Add a new posting of an item that is on the market for trade
 	"""
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
