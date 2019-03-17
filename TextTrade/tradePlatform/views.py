@@ -5,6 +5,10 @@ from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
 # include decompose in your views.py
 from django_twilio.request import decompose
+from tradePlatform.models import User, Listing
+# Do I need these next two?
+from django.template import RequestContext
+from django.shortcuts import render_to_response
 
 # Create your views here.
 def index(request):
@@ -23,9 +27,59 @@ def sms_response(request):
 	response = MessagingResponse()
 
 	twilio_request = decompose(request)
-	phone_number = twilio_request.from_
+	from_phone_number = twilio_request.from_
+	#msg = response.message(str(from_phone_number))
+
+	#ToDo: see if the phone number is in our database, 
+	#	if it isnt, ask for their location
+	#		when there is a response. Create a new User
+	#		tell them how to use the app
+	#	if it is, look at the text. Does it say 'Interested Listing_ID' or 'Trading'
+	#		if 'trading' ask for them to say item, description etc... in specific format. Create Listing
+	#			then calculate their distance to other users.
+	#			if a user is within a certain distance, send them a message of the Listing and tell them to send back 'Interested Listing_ID'.
+	#		if 'interested Listing_ID':
+	#			respond with a message saying 'contact 'the number of the person who made the listing' to negotiate a trade and pickup'
+	#		
+		
+	user = User.objects.filter(phoneNumber=from_phone_number) 
+	#return HttpResponse(str(response))
+
+	if user:
+		#text should look like "Interested in: 17" 
+		text_body_split = twilio_request.body.split(':')
+
+
+		while text_body_split[0].strip() != "Interested in" and text_body_split[0].strip() != 'Trading':
+			# NoteToSelf: Does this send a message or does it need to return to send a message?
+			
+			# If the user wants to stop the text conversation
+			if twilio_request.body.strip() == 'stop':
+				response.message("Stopped")
+				return HttpResponse(response)
+			response.message("Please send a message in the form of 'Interested in: Listing number'. for example 'Interested in: 1'. Or 'Trading' Or type 'Stop'.")
+			HttpResponse(response)
+		
+		# User has succesfully responded
+		if text_body_split[0].strip() == 'Interested in':
+			listing_id = twilio_request.body.split(':')[1].strip()
+			response.message("Your contact info has been sent to the owner of this listing")
+			return HttpResponse(response)
+			#text the owner of the listing
+			# ToDo: how to text someone else. (use avkash's code)
+			
+		elif text_body_split[0].strip() == 'Trading':
+			response.message("Please type the item you are trading followed by a ':' then the description of the item. ex: 'carrots: carrots picked 10 days ago'")
+			return HttpResponse(response)
+
+	else:
+		response.message("what is you location, type your town or address (as if into google maps)")
+		return HttpResponse(response)
+
+
+
 	# Add a text message
-	msg = response.message(str(phone_number))
+	#msg = response.message(str(phone_number))
 
 	return HttpResponse(str(response))
 

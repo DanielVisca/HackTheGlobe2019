@@ -5,7 +5,7 @@ class User(models.Model):
 	"""
 	This creates a table that store all of the Users
 	"""
-	phoneNumber = models.IntegerField(default=5148896686)
+	phoneNumber = models.CharField(max_length=15)
 	becameMember = models.DateTimeField('Date joined')
 	location = models.CharField(max_length=200)
 
