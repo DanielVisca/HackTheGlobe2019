@@ -11,6 +11,7 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.utils import timezone
 from twilio.rest import Client
+from twilio.twiml.messaging_response import Body, Message, Redirect
 
 # Create your views here.
 def index(request):
@@ -52,14 +53,14 @@ def sms_response(request):
 		text_body_split = twilio_request.body.split(':')
 
 
-		if text_body_split[0].strip() != "Interested in" and text_body_split[0].strip() != 'Trading':
+		if text_body_split[0].strip() != "Interested in" and text_body_split[0].strip() != 'Trading' and text_body_split[0].strip() != "See listings":
 			# NoteToSelf: Does this send a message or does it need to return to send a message?
 			
 			# If the user wants to stop the text conversation
 			# if twilio_request.body.strip() == 'stop':
 			# 	response.message("Stopped")
 			# 	return HttpResponse(response)
-			response.message("Please send a message in the form of 'Interested in: Listing number'. for example 'Interested in: 1'. Or 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago''")
+			response.message("Please send a message in the form of 'Interested in: Listing number'. for example 'Interested in: 1'. Or 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago' To view listings type 'see listings'.")
 			return HttpResponse(response)
 		
 		# User has succesfully responded
@@ -77,11 +78,56 @@ def sms_response(request):
 			response.message("Your trade has been sent to locals, you will recieve a message from us when someone wants to Trade!")
 			return HttpResponse(response)
 
+		elif text_body_split[0].strip().lower() == 'see listings':
+			message=Message()
+			message.body("Available listings: ")
+
+			#response.message("Available listings: ")
+			response.append(message)
+			for listing in Listing.objects.all()[:10]:
+				message=Message()
+				listing_id=listing.id
+				listing_item=listing.item	
+				message.body("Listing ID: {}, Item: {}".format(listing_id, listing_item))
+				response.append(message)
+
+			response.append("Please send a message in the form of 'Interested in: Listing number'. for example 'Interested in: 1'If you recieve a messaged about an item being traded in your area, text 'Interested in: listing_id' example 'Interested in: 3'.")
+
+			return HttpResponse(response)
+
+		elif text_body_split[0].strip().lower() == 'remove number':
+			toBeRemoved=User.objects.filter(id=user[0].id)
+			toBeRemoved.delete()
+			response.message("Your number will be removed")
+			return HttpResponse(response)
+
+		# elif text_body_split[0].strip().lower() == 'remove listing':
+		# 	listing_id = text_body_split[1].strip().lower()
+		# 	#user_id = user[0].id
+
+		# 	try:
+		# 		listings=Listing.objects.filter(id=listing_id)
+		# 		#to_delete = listing.filter(user=user)
+		# 	except:
+		# 		response.message("This listing does not exist")
+		# 		return HttpResponse(response)
+
+		# 	for listing in listings:
+		# 		if listing.user.id == user.id:
+		# 			listing.delete()
+
+			
+
+		else:
+			response.message("When you have something to Trade, text 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago' . If you recieve a messaged about an item being traded in your area, text 'Interested in: listing_id' example 'Interested in: 3'. To remove your number fromt TextTrade, send 'remove number'. To see all listings send 'see listings'.")
+			return HttpResponse(response)
+
+
+
 	else:
 		new_user = User(phoneNumber=from_phone_number, becameMember=timezone.now())
 		new_user.save()
-		response.message("You have been added to our trading platform. When you have something to Trade, text 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago'.\
-			If you recieve a messaged about an item being traded in your area, text 'Interested in: listing_id' example 'Interested in: 3'.")
+		response.message("You have been added to our trading platform. When you have something to Trade, text 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago'. If you recieve a messaged about an item being traded in your area, text 'Interested in: listing_id' example 'Interested in: 3'.")
 		return HttpResponse(response)
 
 
@@ -106,4 +152,6 @@ def contactTrader(from_phone_number,listing_id):
 	                     to=to_phone_number
 	                 )
 	print(message.sid)
+
+
 
