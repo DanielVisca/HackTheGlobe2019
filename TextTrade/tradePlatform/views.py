@@ -23,7 +23,7 @@ def sms_response(request):
 	response = MessagingResponse()
 
 	twilio_request = decompose(request)
-	phone_number = twilio_request.to
+	phone_number = twilio_request.from_
 	# Add a text message
 	msg = response.message(str(phone_number))
 
