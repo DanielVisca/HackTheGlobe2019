@@ -10,6 +10,7 @@ from tradePlatform.models import User, Listing
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.utils import timezone
+from twilio.rest import Client
 
 # Create your views here.
 def index(request):
@@ -64,20 +65,20 @@ def sms_response(request):
 		# User has succesfully responded
 		elif text_body_split[0].strip() == 'Interested in':
 			listing_id = twilio_request.body.split(':')[1].strip()
+			contactTrader(from_phone_number, listing_id)
 			response.message("Your contact info has been sent to the owner of this listing")
 			return HttpResponse(response)
 			#text the owner of the listing
 			# ToDo: how to text someone else. (use avkash's code)
 			
 		elif text_body_split[0].strip() == 'Trading':
-			new_listing = Listing(user_id=user.id, item=text_body_split[1], description=text_body_split[2],date_added=timezone.now())
+			new_listing = Listing(user_id=user[0].id, item=text_body_split[1], description=text_body_split[2],date_added=timezone.now())
 			new_listing.save()
 			response.message("Your trade has been sent to locals, you will recieve a message from us when someone wants to Trade!")
 			return HttpResponse(response)
 
 	else:
-		zip_code = twilio_request.postal_code
-		new_user = User(phone_number=from_phone_number, becameMember=timezone.now())
+		new_user = User(phoneNumber=from_phone_number, becameMember=timezone.now())
 		new_user.save()
 		response.message("You have been added to our trading platform. When you have something to Trade, text 'Trading: the item: the description' for example 'Trading: Moose : Willing to trade half a moose, shot 2 days ago'.\
 			If you recieve a messaged about an item being traded in your area, text 'Interested in: listing_id' example 'Interested in: 3'.")
@@ -89,4 +90,20 @@ def sms_response(request):
 	#msg = response.message(str(phone_number))
 
 	return HttpResponse(str(response))
+
+def contactTrader(from_phone_number,listing_id):
+	listing=Listing.objects.filter(id=listing_id)
+	user_id=listing[0].user.id
+	user=User.objects.filter(id=user_id)
+	to_phone_number = user[0].phoneNumber
+	account_sid = 'AC384a4f8fb39ec4a48f45cd8e40e4de2d'
+	auth_token = 'c924cc19a0fbb9c9f26fbe3564ab0ebd'
+	client = Client(account_sid, auth_token)
+	message = client.messages \
+	                .create(
+	                     body="Good news! Someone is interested in the item ({}) you posted about. You can contact them at: {}".format(listing[0].item,from_phone_number),
+	                     from_='+16042298878',
+	                     to=to_phone_number
+	                 )
+	print(message.sid)
 
